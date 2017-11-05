@@ -1,6 +1,15 @@
 #include "pcb.h"
 
-typedef struct _rbtree rbtree;
+typedef struct _node {
+	pcb *process;
+	struct _node *next, *prev;
+	int key;
+} node;
+
+typedef struct {
+	node *root;
+	node *min;
+} rbtree;
 
 void rbtree_init(rbtree *);
 
@@ -12,9 +21,9 @@ pcb *rbtree_get(rbtree *, int pid);
 pcb *rbtree_pop(rbtree *);
 
 // retrieve minimum element
-pcb *rbtree_min(rbtree *);
+node *rbtree_min(rbtree *);
 
 // in-order successor
-pcb *rbtree_succ(rbtree *, pcb *);
+node *rbtree_succ(rbtree *, node *);
 
-void rbtree_free(rbtree *);
+void rbtree_free(rbtree *, int freepcb);

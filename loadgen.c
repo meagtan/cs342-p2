@@ -5,7 +5,7 @@
 
 
 // sample from exponential distribution with mean m
-#define EXP(m) ((int) ((m) * -log(rand() / (RAND_MAX + 1.))))
+#define EXP(m) ((m) * -log(rand() / (RAND_MAX + 1.)))
 
 #define ROUND(n, d) (d * ((int) (n / d)))
 
@@ -33,18 +33,21 @@ int main(int argc, char *argv[])
 	// seed rng
 	srand(time(NULL));
 
+	int bursttime;
 	// generate workload for each process
 	for (int i = 1; i <= N; ++i) {
+		while (!(bursttime = EXP(burst))); // burst times should be positive
 		// generate start time
 		// source: en.wikipedia.org/wiki/Exponential_distribution#Generating_exponential_variates
-		fprintf(f, "%d  start %d prio %d\n", i, ROUND(EXP(start), 10), rand() % 40);
+		fprintf(f, "%d  start %d prio %d\n", i, ROUND((int) EXP(start), 10), rand() % 40);
 
 		// generate number of bursts
-		for (int j = EXP(burst); j; --j) {
+		for (int j = bursttime; j; --j) {
 			// generate cpu and io bursts
 			fprintf(f, "%d cpu %d\n", i, ROUND(EXP(cpu), 10));
 			fprintf(f, "%d io %d\n",  i, ROUND(EXP(io), 10));
 		}
+		fprintf(f, "%d cpu %d\n", i, ROUND(EXP(cpu), 10));
 	}
 	fclose(f);
 }

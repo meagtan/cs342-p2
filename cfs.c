@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "runqueue.h"
@@ -24,7 +25,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	rq_init(&q);
+	// rq_init(&q);
 	rbtree_init(&procs);
 
 	// go through each line in file
@@ -33,13 +34,16 @@ int main(int argc, char *argv[])
 	pcb *proc;
 	while (!feof(f)) {
 		fscanf(f, "%d %s", &pid, buf);
-		if (!strcmp(buf, " start")) {
+		// printf("%s\n", buf); // testing
+		if (!strcmp(buf, "start")) {
+			proc = malloc(sizeof(pcb));
 			pcb_init(proc, pid);
 			fscanf(f, " %d prio %d\n", &proc->start, &proc->prio);
+			// printf("%d  start %d prio %d\n", pid, proc->start, proc->prio); // testing
 			rbtree_add(&procs, proc, proc->start);
 		} else {
-			proc = rbtree_get(&procs, pid);
-			fscanf(f, "%d\n", &burst);
+			proc = rbtree_get(&procs, pid); // assuming workload file in correct format
+			fscanf(f, " %d", &burst);
 			if (!strcmp(buf, "cpu"))
 				pcb_add_cpuburst(proc, burst);
 			else
@@ -47,11 +51,19 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	pcb *min = rbtree_min(&procs); // retrieve first process to execute
+	/*
+	node *min = rbtree_min(&procs);
+	while (min != NULL) {
+		printf("%d\n", min->process->pid);
+		min = rbtree_succ(&procs, min);
+	}
+	*/
+	node *min = rbtree_min(&procs); // retrieve first process to execute
 	for (int t = 0; min != NULL || !rq_empty(&rq); t += GRANULARITY) {
 		// add new processes to ready queue
-		while (min != NULL && min->start * 1000000 <= t) {
-			rq_add(&rq, min); // also calculates vruntime
+		while (min != NULL && min->process->start * 1000000 <= t) {
+			rq_add(&rq, min->process); // also calculates vruntime
+			// if min has higher priority, preempt
 			min = rbtree_succ(&procs, min); // in-order successor
 		}
 
@@ -70,11 +82,11 @@ int main(int argc, char *argv[])
 			// update statistics such as waiting time, response time
 		}
 	}
-
+	*/
 	// output statistics
 
 	// write log file
 
-	rq_free(&q);
+	// rq_free(&q);
 	rbtree_free(&procs, 1); // free each pcb as well
 }

@@ -7,8 +7,10 @@ typedef struct _pcb {
 	int burstlen, maxlen; // len(cpubursts) == len(iobursts) + 1 == burstlen < maxlen
 } pcb;
 
-pcb_init(pcb *);
+void pcb_init(pcb *, int pid);
 
-pcb_add_cpuburst(pcb *, int);
+void pcb_add_cpuburst(pcb *, int);
 
-pcb_add_ioburst(pcb *, int);
+void pcb_add_ioburst(pcb *, int);
+
+void pcb_free(pcb *);
