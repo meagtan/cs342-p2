@@ -1,3 +1,4 @@
+#include <stdio.h> // testing
 #include <stdlib.h>
 
 #include "rbtree.h"
@@ -37,6 +38,11 @@ void rbtree_init(rbtree *tree)
 	tree->root = calloc(1, sizeof(node)); // dummy head node
 	tree->root->process = calloc(1, sizeof(pcb));
 	tree->min = NULL;
+}
+
+int rbtree_empty(rbtree *tree)
+{
+	return tree->min == NULL;
 }
 
 void rbtree_add(rbtree *tree, pcb *p, int key)
@@ -86,8 +92,8 @@ pcb *rbtree_pop(rbtree *tree)
 		return NULL;
 
 	pcb *res = tree->min->process;
-	tree->root->next = tree->min->next;
-	tree->root->next->prev = tree->root;
+	if (tree->root->next = tree->min->next)
+		tree->root->next->prev = tree->root;
 	free(tree->min);
 	tree->min = tree->root->next;
 	return res;
@@ -115,11 +121,13 @@ void rbtree_free(rbtree *tree, int freepcb)
 {
 	node *temp = tree->root, *temp1;
 	while (temp != NULL) {
+		if (freepcb || temp == tree->root) // workaround
+			pcb_free(temp->process);
 		temp1 = temp->next;
-		if (freepcb) pcb_free(temp->process);
 		free(temp);
 		temp = temp1;
 	}
+	 // testing
 	// free(tree);
 }
 

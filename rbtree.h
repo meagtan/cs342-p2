@@ -1,5 +1,9 @@
+#ifndef __RBTREE_H
+#define __RBTREE_H
+
 #include "pcb.h"
 
+// ordered linked list implementation
 typedef struct _node {
 	pcb *process;
 	struct _node *next, *prev;
@@ -12,6 +16,8 @@ typedef struct {
 } rbtree;
 
 void rbtree_init(rbtree *);
+
+int rbtree_empty(rbtree *);
 
 void rbtree_add(rbtree *, pcb *, int key);
 
@@ -27,3 +33,5 @@ node *rbtree_min(rbtree *);
 node *rbtree_succ(rbtree *, node *);
 
 void rbtree_free(rbtree *, int freepcb);
+
+#endif

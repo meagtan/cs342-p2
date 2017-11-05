@@ -3,11 +3,15 @@
 #include <math.h>
 #include <time.h>
 
-
 // sample from exponential distribution with mean m
+// source: en.wikipedia.org/wiki/Exponential_distribution#Generating_exponential_variates
 #define EXP(m) ((m) * -log(rand() / (RAND_MAX + 1.)))
 
+// largest integer multiple of d smaller than n, for positive arguments at least
 #define ROUND(n, d) (d * ((int) (n / d)))
+
+// generate var using the first nonzero value expr returns
+// #define GENERATE(var, expr) while (!(var = (expr)))
 
 int main(int argc, char *argv[])
 {
@@ -24,6 +28,8 @@ int main(int argc, char *argv[])
 	cpu   = atoi(argv[4]);
 	io    = atoi(argv[5]);
 
+	printf("N: %d start: %d burst: %d cpu: %d io: %d\n", N, start, burst, cpu, io);
+
 	FILE *f = fopen(argv[6], "w");
 	if (!f) {
 		fprintf(stderr, "Error: could not open file %s.\n", argv[6]);
@@ -33,21 +39,26 @@ int main(int argc, char *argv[])
 	// seed rng
 	srand(time(NULL));
 
-	int bursttime;
+	int burstnum, starttime, bursttime; // generated number of bursts, start time, burst time
 	// generate workload for each process
 	for (int i = 1; i <= N; ++i) {
-		while (!(bursttime = EXP(burst))); // burst times should be positive
-		// generate start time
-		// source: en.wikipedia.org/wiki/Exponential_distribution#Generating_exponential_variates
-		fprintf(f, "%d  start %d prio %d\n", i, ROUND((int) EXP(start), 10), rand() % 40);
-
 		// generate number of bursts
-		for (int j = bursttime; j; --j) {
-			// generate cpu and io bursts
-			fprintf(f, "%d cpu %d\n", i, ROUND(EXP(cpu), 10));
-			fprintf(f, "%d io %d\n",  i, ROUND(EXP(io), 10));
+		// equivalent to sampling bursttime from a geometric distribution with success probability 1-exp(-burst)
+		// integrating burst*exp(-burst*t) for n<t<n+1 (due to rounding) gives (1-exp(-burst))*exp(-burst)^n
+		// GENERATE(burstnum, EXP(burst)); // burst times should be positive
+		// while (!(burstnum = EXP(burst)));
+		burstnum = 1 + EXP(burst); // burst times should be positive
+
+		// generate start time
+		fprintf(f, "%d  start %d prio %d\n", i, 10 + ROUND(EXP(start), 10), rand() % 40);
+
+		// generate cpu and io bursts
+		// may use a further macro here
+		for (int j = burstnum; j; --j) {
+			fprintf(f, "%d cpu %d\n", i, 10 + ROUND(EXP(cpu), 10));
+			fprintf(f, "%d io %d\n",  i, 10 + ROUND(EXP(io), 10));
 		}
-		fprintf(f, "%d cpu %d\n", i, ROUND(EXP(cpu), 10));
+		fprintf(f, "%d cpu %d\n", i, 10 + ROUND(EXP(cpu), 10));
 	}
 	fclose(f);
 }

@@ -1,3 +1,3 @@
-all: loadgen.c cfs.c rbtree.c pcb.c
+all: loadgen.c cfs.c rbtree.c pcb.c runqueue.c
 	cc -o loadgen loadgen.c -lm
-	cc -o cfs cfs.c rbtree.c pcb.c
+	cc -o cfs cfs.c rbtree.c pcb.c runqueue.c
