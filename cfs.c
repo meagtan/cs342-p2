@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
 	rbtree procs,   // stores all processes sorted by pid
 	       waiting; // stores processes currently waiting to enter run queue (either not started or in io burst)
 	FILE *f;
+	node *min;
 
 	// read workload file
 	if (argc != 3) {
@@ -46,7 +47,8 @@ int main(int argc, char *argv[])
 			rbtree_add(&waiting, proc, proc->start);
 		} else {
 			proc = rbtree_get(&procs, pid); // assuming workload file in correct format
-			fscanf(f, " %d", &burst);
+			fscanf(f, " %d\n", &burst); // skip newline, otherwise last line read twice
+			// printf("%d %s %d\n", pid, buf, burst);
 			burst *= 1000000;
 			if (!strcmp(buf, "cpu"))
 				pcb_add_cpuburst(proc, burst);
@@ -55,13 +57,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	node *min = rbtree_min(&waiting); // retrieve first process to execute
-	for (int t = 0; min != NULL || !rq_empty(&q); t += GRANULARITY) {
+	// loop until no processes waiting, running or ready
+	// node *min = rbtree_min(&waiting); // retrieve first process to execute
+	for (long long t = 0; (min = rbtree_min(&waiting)) != NULL || !rq_empty(&q); t += GRANULARITY) {
 		// add new processes to run queue
-		while (min != NULL && min->process->start <= t) {
+		// clean up loop later
+		while ((min = rbtree_min(&waiting)) != NULL && min->process->start <= t) {
 			rq_add(&q, min->process); // also calculates vruntime
 			rbtree_pop(&waiting);
-			min = rbtree_min(&waiting); // in-order successor
+			// min = rbtree_min(&waiting); // in-order successor
 		}
 
 		// update time of running process if not null
@@ -82,12 +86,15 @@ int main(int argc, char *argv[])
 				q.running->bursttime = 0;
 				// if process not in last cpu burst, should enter io burst and enter run queue afterwards
 				if (q.running->burstnum < q.running->burstlen - 1) {
+					printf("time: %lld pid: %d enter io burst %d of length %d\n", t / 1000000, q.running->pid,
+						q.running->burstnum, q.running->iobursts[q.running->burstnum] / 1000000); // testing
 					rbtree_add(&waiting, q.running, t + q.running->iobursts[q.running->burstnum]);
 					q.running->burstnum++;
-				}
+				} else printf("time: %lld pid: %d exit\n", t / 1000000, q.running->pid); // testing
 				q.running->end = t;
 				rq_yield(&q); // remove q.running from run queue
 			} else if (proc = rq_preempt(&q, t)) { // if running process preempted, in which case proc = q->running, q->running = NULL
+				printf("time: %lld pid: %d preempted, new timeslice %d\n", t / 1000000, proc->pid, proc->timeslice / 1000000); // testing
 				proc->end = t;
 			}
 		}
@@ -105,7 +112,7 @@ int main(int argc, char *argv[])
 
 			// testing, write to log file instead
 			if (q.running)
-				printf("time: %d running: %d bursttime: %d burst: %d timeslice: %d\n", t / 1000000, q.running->pid,
+				printf("time: %lld running: %d bursttime: %d burst: %d timeslice: %d\n", t / 1000000, q.running->pid,
 					q.running->bursttime / 1000000, q.running->cpubursts[q.running->burstnum] / 1000000, q.running->timeslice / 1000000);
 		}
 	}

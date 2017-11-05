@@ -29,7 +29,7 @@ void rq_init(runqueue *q)
 // if queue is empty
 int rq_empty(runqueue *q)
 {
-	return rbtree_empty(&q->queue);
+	return !q->running && rbtree_empty(&q->queue);
 }
 
 // add process to queue
