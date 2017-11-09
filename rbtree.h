@@ -2,12 +2,13 @@
 #define __RBTREE_H
 
 #include "pcb.h"
+#include "specs.h"
 
 // ordered linked list implementation
 typedef struct _node {
 	pcb *process;
 	struct _node *next, *prev;
-	int key;
+	uint64_t key; // may be both unsigned int or time unit
 } node;
 
 typedef struct {
@@ -19,7 +20,7 @@ void rbtree_init(rbtree *);
 
 int rbtree_empty(rbtree *);
 
-void rbtree_add(rbtree *, pcb *, int key);
+void rbtree_add(rbtree *, pcb *, uint64_t key);
 
 pcb *rbtree_get(rbtree *, int pid);
 
@@ -32,6 +33,7 @@ node *rbtree_min(rbtree *);
 // in-order successor
 node *rbtree_succ(rbtree *, node *);
 
+// set freepcb to 1 in order to free pcbs as well as nodes
 void rbtree_free(rbtree *, int freepcb);
 
 #endif

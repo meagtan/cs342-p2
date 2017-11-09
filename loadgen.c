@@ -5,7 +5,7 @@
 
 // sample from exponential distribution with mean m
 // source: en.wikipedia.org/wiki/Exponential_distribution#Generating_exponential_variates
-#define EXP(m) ((m) * -log(rand() / (RAND_MAX + 1.)))
+#define EXP(m) ((int) ((m) * -log(rand() / (RAND_MAX + 1.))))
 
 // largest integer multiple of d smaller than n, for positive arguments at least
 #define ROUND(n, d) (d * ((int) (n / d)))
@@ -50,15 +50,15 @@ int main(int argc, char *argv[])
 		burstnum = 1 + EXP(burst); // burst times should be positive
 
 		// generate start time
-		fprintf(f, "%d  start %d prio %d\n", i, 10 + ROUND(EXP(start), 10), rand() % 40);
+		fprintf(f, "%d  start %d prio %d\n", i, EXP(start), rand() % 40);
 
 		// generate cpu and io bursts
 		// may use a further macro here
 		for (int j = burstnum; j; --j) {
-			fprintf(f, "%d cpu %d\n", i, 10 + ROUND(EXP(cpu), 10));
-			fprintf(f, "%d io %d\n",  i, 10 + ROUND(EXP(io), 10));
+			fprintf(f, "%d cpu %d\n", i, EXP(cpu));
+			fprintf(f, "%d io %d\n",  i, EXP(io));
 		}
-		fprintf(f, "%d cpu %d\n", i, 10 + ROUND(EXP(cpu), 10));
+		fprintf(f, "%d cpu %d\n", i, EXP(cpu));
 	}
 	fclose(f);
 }

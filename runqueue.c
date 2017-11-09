@@ -14,8 +14,7 @@ static const int prio_to_weight[40] = {
 /*  15 */        36,        29,        23,        18,        15,
 };
 
-// cast to long long to avoid overflow
-#define TARGET_LATENCY(q) ((long long) (((q)->procs > 20 ? (q)->procs : 20) * GRANULARITY))
+#define TARGET_LATENCY(q) ((timeunit) GRANULARITY * ((q)->procs > 20 ? (q)->procs : 20))
 
 void rq_init(runqueue *q)
 {
@@ -39,7 +38,7 @@ void rq_add(runqueue *q, pcb *p)
 	// vruntime = min(old_vruntime, min_vruntime - targeted_latency) after io burst
 	if (p->vruntime == 0) // new process
 		p->vruntime = q->min_vruntime - GRANULARITY;
-	else if (p->vruntime < q->min_vruntime - TARGET_LATENCY(q))
+	else if (p->bursttime == 0 && p->vruntime < q->min_vruntime - TARGET_LATENCY(q))
 		p->vruntime = q->min_vruntime - TARGET_LATENCY(q);
 	rbtree_add(&q->queue, p, p->vruntime);
 	q->procs++;
@@ -56,23 +55,23 @@ void rq_yield(runqueue *q)
 }
 
 // update vruntime of running process
-void rq_update(runqueue *q, int dt)
+void rq_update(runqueue *q, timeunit dt)
 {
 	q->running->vruntime += dt * prio_to_weight[20] / prio_to_weight[q->running->prio];
 
 	// min_vruntime = max(min_vruntime, min(running.vruntime, queue.min.vruntime))
-	int vruntime = q->running->vruntime;
+	timeunit vruntime = q->running->vruntime;
 	if (q->queue.min && vruntime > q->queue.min->key)
 		vruntime = q->queue.min->key;
 	if (q->min_vruntime < vruntime)
 		q->min_vruntime = vruntime;
 }
 
-// if running process exceeds its time slice, preempt and add it to run queue
-pcb *rq_preempt(runqueue *q, int t)
+// if running process exceeds its time slice (recomputed), preempt and add it to run queue
+pcb *rq_preempt(runqueue *q, timeunit t)
 {
 	q->running->timeslice = TARGET_LATENCY(q) * prio_to_weight[q->running->prio] / q->load;
-	if (t - q->running->end >= q->running->timeslice) { // TODO bursttime checks total time in burst, use end
+	if (t - q->running->burststart >= q->running->timeslice) { // end = last time q->running started running after waiting
 		pcb *running = q->running;
 		rq_yield(q); // remove running process
 		rq_add(q, running); // add it back to run queue

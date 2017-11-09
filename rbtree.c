@@ -45,7 +45,7 @@ int rbtree_empty(rbtree *tree)
 	return tree->min == NULL;
 }
 
-void rbtree_add(rbtree *tree, pcb *p, int key)
+void rbtree_add(rbtree *tree, pcb *p, uint64_t key)
 {
 	// create node
 	node *n = malloc(sizeof(node));
