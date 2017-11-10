@@ -3,9 +3,19 @@
 #include <math.h>
 #include <time.h>
 
+// sample from uniform distribution on (0,1)
+#define UNI() (rand() / (RAND_MAX + 1.))
+
+// sample from -ln U(0,1)
+#define LOGUNI() (-log(rand()) + log(RAND_MAX + 1.))
+
 // sample from exponential distribution with mean m
 // source: en.wikipedia.org/wiki/Exponential_distribution#Generating_exponential_variates
-#define EXP(m) ((int) ((m) * -log(rand() / (RAND_MAX + 1.))))
+#define EXP(m) ((int) ((m) * LOGUNI()))
+
+// sample from normal distribution with mean m and std s
+// Box-Muller transform
+#define NORMAL(m, s) ((int) (m + s * sqrt(2 * LOGUNI()) * cos(2*M_PI*UNI())))
 
 // largest integer multiple of d smaller than n, for positive arguments at least
 #define ROUND(n, d) (d * ((int) (n / d)))
@@ -50,15 +60,15 @@ int main(int argc, char *argv[])
 		burstnum = 1 + EXP(burst); // burst times should be positive
 
 		// generate start time
-		fprintf(f, "%d  start %d prio %d\n", i, EXP(start), rand() % 40);
+		fprintf(f, "%d  start %d prio %d\n", i, EXP(start), NORMAL(20, 5) % 40);
 
 		// generate cpu and io bursts
 		// may use a further macro here
 		for (int j = burstnum; j; --j) {
-			fprintf(f, "%d cpu %d\n", i, EXP(cpu));
-			fprintf(f, "%d io %d\n",  i, EXP(io));
+			fprintf(f, "%d cpu %d\n", i, 10 + EXP(cpu));
+			fprintf(f, "%d io %d\n",  i, 10 + EXP(io));
 		}
-		fprintf(f, "%d cpu %d\n", i, EXP(cpu));
+		fprintf(f, "%d cpu %d\n", i, 10 + EXP(cpu));
 	}
 	fclose(f);
 }

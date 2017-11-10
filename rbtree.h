@@ -4,11 +4,13 @@
 #include "pcb.h"
 #include "specs.h"
 
+typedef timeunit keyunit;
+
 // ordered linked list implementation
 typedef struct _node {
 	pcb *process;
 	struct _node *next, *prev;
-	uint64_t key; // may be both unsigned int or time unit
+	keyunit key; // may be both unsigned int or time unit
 } node;
 
 typedef struct {
@@ -20,7 +22,7 @@ void rbtree_init(rbtree *);
 
 int rbtree_empty(rbtree *);
 
-void rbtree_add(rbtree *, pcb *, uint64_t key);
+void rbtree_add(rbtree *, pcb *, keyunit key);
 
 pcb *rbtree_get(rbtree *, int pid);
 

@@ -36,9 +36,10 @@ void rq_add(runqueue *q, pcb *p)
 {
 	// vruntime = min_vruntime - 10 ms for new process
 	// vruntime = min(old_vruntime, min_vruntime - targeted_latency) after io burst
-	if (p->vruntime == 0) // new process
+	// need checks, otherwise unsigned subtraction overflows
+	if (p->vruntime == 0 && q->min_vruntime > GRANULARITY) // new process
 		p->vruntime = q->min_vruntime - GRANULARITY;
-	else if (p->bursttime == 0 && p->vruntime < q->min_vruntime - TARGET_LATENCY(q))
+	else if (p->bursttime == 0 && q->min_vruntime >= TARGET_LATENCY(q) && p->vruntime < q->min_vruntime - TARGET_LATENCY(q))
 		p->vruntime = q->min_vruntime - TARGET_LATENCY(q);
 	rbtree_add(&q->queue, p, p->vruntime);
 	q->procs++;
@@ -57,6 +58,9 @@ void rq_yield(runqueue *q)
 // update vruntime of running process
 void rq_update(runqueue *q, timeunit dt)
 {
+	// can overflow
+	q->running->runtime += dt;
+	// q->running->vruntime = exp(log(q->running->runtime) + log(prio_to_weight[20]) - log(prio_to_weight[q->running->prio]));
 	q->running->vruntime += dt * prio_to_weight[20] / prio_to_weight[q->running->prio];
 
 	// min_vruntime = max(min_vruntime, min(running.vruntime, queue.min.vruntime))
@@ -71,7 +75,7 @@ void rq_update(runqueue *q, timeunit dt)
 pcb *rq_preempt(runqueue *q, timeunit t)
 {
 	q->running->timeslice = TARGET_LATENCY(q) * prio_to_weight[q->running->prio] / q->load;
-	if (t - q->running->burststart >= q->running->timeslice) { // end = last time q->running started running after waiting
+	if (t >= q->running->burststart + q->running->timeslice) { // end = last time q->running started running after waiting
 		pcb *running = q->running;
 		rq_yield(q); // remove running process
 		rq_add(q, running); // add it back to run queue
