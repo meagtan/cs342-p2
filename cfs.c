@@ -5,8 +5,10 @@
 #include "runqueue.h"
 #include "event.h"
 
-// milliseconds
-#define MS / 1000000
+#define MIL 1000000
+
+// milliseconds, usage: a MS = a / MIL
+#define MS / MIL
 
 int main(int argc, char *argv[])
 {
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
 
 			fscanf(f, " %llu", &proc->start);
 			fscanf(f, " prio %d\n", &proc->prio);
-			proc->start *= 1000000; // convert to ns
+			proc->start *= MIL; // convert to ns
 
 			// add pcb to process list and create entrance event
 			rbtree_add(&procs, proc, pid);
@@ -55,7 +57,7 @@ int main(int argc, char *argv[])
 		} else if (strcmp(buf, "end")) {
 			// proc = rbtree_get(&procs, pid); // assuming workload file in correct format
 			fscanf(f, " %llu\n", &burst); // skip newline, otherwise last line read twice
-			burst *= 1000000;
+			burst *= MIL;
 
 			if (!strcmp(buf, "cpu"))
 				pcb_add_cpuburst(proc, burst);
