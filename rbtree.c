@@ -65,7 +65,7 @@ void rbtree_add(rbtree *tree, pcb *p, keyunit key)
 	*/
 	// traverse list until reach end or larger key
 	node *temp = tree->root;
-	while (temp->next != NULL && temp->next->key < key)
+	while (temp->next != NULL && temp->next->key <= key)
 		temp = temp->next;
 	if (temp->next) {
 		temp->next->prev = n;

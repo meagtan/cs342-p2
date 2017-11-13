@@ -5,15 +5,17 @@
 #include "runqueue.h"
 #include "event.h"
 
+// milliseconds
+#define MS / 1000000
+
 int main(int argc, char *argv[])
 {
-	// int *turnaround, waiting, response; // stats
 	runqueue q;
-	rbtree procs,   // stores all processes sorted by pid
-	       waiting; // stores processes currently waiting to enter run queue (either not started or in io burst) // evtqueue event;
-	evtqueue event;
+	rbtree procs;   // stores all processes sorted by pid
+	evtqueue event; // stores all external events for the scheduler to respond to
 	FILE *f;
-	node *min;
+	// node *min;
+	timeunit idletime = 0; // time spent idle
 
 	// read workload file
 	if (argc != 3) {
@@ -29,7 +31,6 @@ int main(int argc, char *argv[])
 
 	rq_init(&q);
 	rbtree_init(&procs);
-	// rbtree_init(&waiting);
 	evt_init(&event);
 
 	// go through each line in file
@@ -38,21 +39,21 @@ int main(int argc, char *argv[])
 	char buf[8];
 	pcb *proc;
 	while (!feof(f)) {
-		fscanf(f, "%d %s", &pid, buf);
+		fscanf(f, " %d %s", &pid, buf);
 		if (!strcmp(buf, "start")) {
 			// create pcb
 			proc = malloc(sizeof(pcb));
-			if (proc == NULL) printf("malloc failed\n");
 			pcb_init(proc, pid);
-			fscanf(f, " %llu prio %d\n", &proc->start, &proc->prio);
+
+			fscanf(f, " %llu", &proc->start);
+			fscanf(f, " prio %d\n", &proc->prio);
 			proc->start *= 1000000; // convert to ns
 
 			// add pcb to process list and create entrance event
 			rbtree_add(&procs, proc, pid);
-			// rbtree_add(&waiting, proc, proc->start);
 			evt_addproc(&event, proc, proc->start);
-		} else {
-			proc = rbtree_get(&procs, pid); // assuming workload file in correct format
+		} else if (strcmp(buf, "end")) {
+			// proc = rbtree_get(&procs, pid); // assuming workload file in correct format
 			fscanf(f, " %llu\n", &burst); // skip newline, otherwise last line read twice
 			burst *= 1000000;
 
@@ -63,10 +64,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// close input, open output
+	fclose(f);
+	f = fopen(argv[2], "w");
+
 	// loop until no processes waiting, running or ready
-	// node *min = rbtree_min(&waiting); // retrieve first process to execute
-	// for (long long t = 0; (min = rbtree_min(&waiting)) != NULL || !rq_empty(&q); t += GRANULARITY) {
-	timeunit t, t1; // t1 - time of previous event
+	timeunit t; // time of current event
 	while (!evt_empty(&event) || !rq_empty(&q)) {
 		// condition on type of event occurring
 		// if arrival, add process to run queue and then schedule
@@ -74,26 +77,33 @@ int main(int argc, char *argv[])
 		// if timer tick, just schedule
 		switch (evt_pop(&event, &t, &proc)) {
 		case ARRIVAL:
-			printf("time: %llu pid: %d arrival\n", t / 1000000, proc->pid);
+			proc->entrance = t;
+			proc->end = t; // in order to record waiting time
 			rq_add(&q, proc); // also calculates vruntime
+
+			printf("time: %llu pid: %d arrival\n", t MS, proc->pid);
+			// if (q.running && q.running->vruntime > proc->vruntime) printf("preempt\n");
 			break;
-		case FINISH: // does this keep the changes in q.running in mind?
-			// TODO update statistics
-			rq_update(&q, t - q.running->end);
+		case FINISH:
+			fprintf(f, "%d %llu\n", q.running->pid, (t - q.running->burststart) MS);
+
+			rq_update(&q, t);
 			q.running->bursttime = 0;
-			q.running->end = t;
 
 			// if process not in last cpu burst, should enter io burst and enter run queue afterwards
 			if (q.running->burstnum < q.running->burstlen - 1) {
-				printf("time: %llu pid: %d enter io burst %d of length %llu\n", t / 1000000, q.running->pid,
-					q.running->burstnum, q.running->iobursts[q.running->burstnum] / 1000000); // testing
-				// rbtree_add(&waiting, q.running, t + q.running->iobursts[q.running->burstnum]);
+				printf("time: %llu pid: %d enter io burst %d of length %llu\n", t MS, q.running->pid,
+					q.running->burstnum, q.running->iobursts[q.running->burstnum] MS); // testing
+
 				evt_addproc(&event, q.running, t + q.running->iobursts[q.running->burstnum]);
 				q.running->burstnum++;
-			} else printf("time: %llu pid: %d exit\n", t / 1000000, q.running->pid); // testing
+			}
+			else printf("time: %llu pid: %d exit\n", t MS, q.running->pid); // testing
 
 			rq_yield(&q); // remove q.running from run queue
 			event.finish = IDLE;
+
+			idletime = t;
 			break;
 		}
 
@@ -102,23 +112,25 @@ int main(int argc, char *argv[])
 		// update and possibly preempt running process if not null
 		if (q.running != NULL) {
 			// update virtual runtime, possibly preempt running process
-			rq_update(&q, t - q.running->end);
-			q.running->bursttime += t - q.running->end;
-			q.running->end = t;
+			rq_update(&q, t);
 
 			// if running process preempted, in which case proc = q->running, q->running = NULL
 			if (proc = rq_preempt(&q, t)) {
 				event.finish = IDLE;
+				fprintf(f, "%d %llu\n", proc->pid, (t - proc->burststart) MS);
+				idletime = t;
 
-		// testing
-		node *min = rbtree_min(&q.queue);
-		while (min != NULL) {
-			printf("%d %llu\t", min->process->pid, min->process->vruntime / 1000000);
-			min = min->next;
-		}
-		printf("\n");
+/*
+				// testing
+				node *min = rbtree_min(&q.queue);
+				while (min != NULL) {
+					printf("%d %llu\t", min->process->pid, min->process->vruntime MS);
+					min = min->next;
+				}
+				printf("\n");
+*/
 
-				printf("time: %llu pid: %d preempted, new timeslice %llu\n", t / 1000000, proc->pid, proc->timeslice / 1000000); // testing
+				printf("time: %llu pid: %d preempted, new timeslice %llu\n", t MS, proc->pid, proc->timeslice MS); // testing
 			}
 		}
 
@@ -129,53 +141,39 @@ int main(int argc, char *argv[])
 			// running process newly scheduled
 			// update statistics such as waiting time, response time
 			if (q.running) {
-				if (!q.running->actual_start) // first added
+				if (!q.running->bursttime) // newly scheduled after arrival or io burst
+					q.running->response += (t - q.running->entrance);
+				if (!q.running->runtime) // first added
 					q.running->actual_start = t;
 				q.running->burststart = t;
-				q.running->end = t; // should not affect last value of end
+				q.running->waiting += t - q.running->end; // end last updated when running arrived or was preempted
+				q.running->end = t;
+
 				// set finishing time of running process
 				evt_setfinish(&event, q.running, t);
+
+				// if CPU was previously idle, record it
+				if (idletime = t - idletime)
+					fprintf(f, "idle %llu\n", idletime MS);
 			}
 
 			// testing, write to log file instead
 			if (q.running)
-				printf("time: %llu running: %d bursttime: %llu burst: %llu timeslice: %llu\n", t / 1000000, q.running->pid,
-					q.running->bursttime / 1000000, q.running->cpubursts[q.running->burstnum] / 1000000, q.running->timeslice / 1000000);
+				printf("time: %llu running: %d bursttime: %llu burst: %llu timeslice: %llu\n", t MS, q.running->pid,
+					q.running->bursttime MS, q.running->cpubursts[q.running->burstnum] MS, q.running->timeslice MS);
 		}
-
-		/*
-		// add new processes to run queue
-		// clean up loop later
-		while ((min = rbtree_min(&waiting)) != NULL && min->process->start <= t) {
-			rbtree_pop(&waiting);
-			// min = rbtree_min(&waiting); // in-order successor
-		}
-
-		// update time of running process if not null
-		if (q.running != NULL) {
-
-			// increment other properties, such as turnaround time
-			// better calculated from difference of starting and ending time
-
-			// update virtual runtime, possibly preempt
-			rq_update(&q, GRANULARITY);
-
-			// if no running process,
-			// or if any process added recently has higher priority than running process,
-			// or if running process exceeded its time slice, preempt and invoke scheduler
-			if (q.running->bursttime >= q.running->cpubursts[q.running->burstnum]) {
-			} else
-		}
-		*/
-
 	}
 
 	// output statistics
-
-	// write log file
+	for (node *min = rbtree_min(&procs); min; min = min->next) {
+		proc = min->process;
+		printf("%d %d %llu %llu %llu %llu %llu\n", proc->pid, proc->prio, proc->start MS, proc->end MS,
+		       (proc->end - proc->start) MS, proc->waiting MS, proc->response / proc->burstlen MS);
+	}
 
 	rq_free(&q);
-	// rbtree_free(&waiting, 0);
 	evt_free(&event);
 	rbtree_free(&procs, 1); // free each pcb as well
+
+	fclose(f);
 }

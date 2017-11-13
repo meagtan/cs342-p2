@@ -23,6 +23,7 @@ void rq_init(runqueue *q)
 	q->min_vruntime = 0;
 	q->procs = 0;
 	q->load = 0;
+	q->preempt = 0;
 }
 
 // if queue is empty
@@ -41,9 +42,12 @@ void rq_add(runqueue *q, pcb *p)
 		p->vruntime = q->min_vruntime - GRANULARITY;
 	else if (p->bursttime == 0 && q->min_vruntime >= TARGET_LATENCY(q) && p->vruntime < q->min_vruntime - TARGET_LATENCY(q))
 		p->vruntime = q->min_vruntime - TARGET_LATENCY(q);
+
 	rbtree_add(&q->queue, p, p->vruntime);
 	q->procs++;
 	q->load += prio_to_weight[p->prio];
+
+	q->preempt = (q->running && p->vruntime < q->running->vruntime);
 }
 
 void rq_yield(runqueue *q)
@@ -56,11 +60,14 @@ void rq_yield(runqueue *q)
 }
 
 // update vruntime of running process
-void rq_update(runqueue *q, timeunit dt)
+void rq_update(runqueue *q, timeunit t)
 {
-	// can overflow
+	timeunit dt = t - q->running->end;
+
+	// update statistics
+	q->running->end = t;
+	q->running->bursttime += dt;
 	q->running->runtime += dt;
-	// q->running->vruntime = exp(log(q->running->runtime) + log(prio_to_weight[20]) - log(prio_to_weight[q->running->prio]));
 	q->running->vruntime += dt * prio_to_weight[20] / prio_to_weight[q->running->prio];
 
 	// min_vruntime = max(min_vruntime, min(running.vruntime, queue.min.vruntime))
@@ -74,8 +81,13 @@ void rq_update(runqueue *q, timeunit dt)
 // if running process exceeds its time slice (recomputed), preempt and add it to run queue
 pcb *rq_preempt(runqueue *q, timeunit t)
 {
+	// if no processes waiting or waiting processes have more vruntime, running process may continue beyond timeslice
+	if (!q->queue.min || q->queue.min->process->vruntime > q->running->vruntime)
+		return NULL;
+
 	q->running->timeslice = TARGET_LATENCY(q) * prio_to_weight[q->running->prio] / q->load;
-	if (t >= q->running->burststart + q->running->timeslice) { // end = last time q->running started running after waiting
+	if (t >= q->running->burststart + q->running->timeslice || q->preempt) {
+		q->preempt = 0;
 		pcb *running = q->running;
 		rq_yield(q); // remove running process
 		rq_add(q, running); // add it back to run queue

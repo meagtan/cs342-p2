@@ -14,8 +14,10 @@ typedef struct _pcb {
 
 	// statistics
 	timeunit actual_start, end; // turnaround = end - actual_start, end = time process last enters or leaves execution
-	timeunit waiting; // total waiting time, updated whenever process is scheduled to run
+	timeunit response; // average response time, updated whenever process arrives and is scheduled to run
+	timeunit waiting;
 	timeunit runtime; // total run time
+	timeunit entrance;
 
 	// other variables for scheduling
 	timeunit vruntime;  // virtual run time

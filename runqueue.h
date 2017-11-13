@@ -10,6 +10,7 @@ typedef struct _runqueue {
 	timeunit min_vruntime;
 	int procs;
 	int load;
+	int preempt; // whether running process is to be preempted
 } runqueue;
 
 void rq_init(runqueue *);
@@ -17,7 +18,7 @@ void rq_init(runqueue *);
 // if queue is empty
 int rq_empty(runqueue *);
 
-// add process to queue
+// add process to queue; if it has less vruntime than running, preempt running later
 void rq_add(runqueue *, pcb *);
 
 // remove running process

@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 			fprintf(f, "%d io %d\n",  i, 10 + EXP(io));
 		}
 		fprintf(f, "%d cpu %d\n", i, 10 + EXP(cpu));
+		fprintf(f, "%d end\n", i);
 	}
 	fclose(f);
 }
