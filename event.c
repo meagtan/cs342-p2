@@ -13,6 +13,18 @@ void evt_addproc(evtqueue *q, pcb *p, timeunit t)
 	rbtree_add(&q->arrivals, p, t);
 }
 
+// time of next event
+timeunit evt_min(evtqueue *q)
+{
+	timeunit t = (q->last / GRANULARITY + 1) * GRANULARITY; // next timer tick
+	if (q->finish <= t)
+		t = q->finish;
+	node *min = rbtree_min(&q->arrivals);
+	if (min && min->key <= t)
+		t = min->key;
+	return t;
+}
+
 // retrieve next event, pass time of occurrence in parameter, return type of event in return value
 // TODO if two events occur at the same time, scheduler should take both into account
 int evt_pop(evtqueue *q, timeunit *t, pcb **p)

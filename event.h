@@ -32,6 +32,9 @@ void evt_init(evtqueue *);
 // add process to event queue, indexed by time of arrival
 void evt_addproc(evtqueue *, pcb *, timeunit);
 
+// time of next event
+timeunit evt_min(evtqueue *);
+
 // retrieve next event, pass time of occurrence and arriving process (if any) in parameter, return type of event in return value
 int evt_pop(evtqueue *, timeunit *, pcb **);
 

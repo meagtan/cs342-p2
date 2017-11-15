@@ -73,41 +73,44 @@ int main(int argc, char *argv[])
 	// loop until no processes waiting, running or ready
 	timeunit t; // time of current event
 	while (!evt_empty(&event) || !rq_empty(&q)) {
-		// condition on type of event occurring
-		// if arrival, add process to run queue and then schedule
-		// if finish, remove running process, add to event queue, update statistics, then schedule
-		// if timer tick, just schedule
-		switch (evt_pop(&event, &t, &proc)) {
-		case ARRIVAL:
-			proc->entrance = t;
-			proc->end = t; // in order to record waiting time
-			rq_add(&q, proc); // also calculates vruntime
+		// process all events at same time instant
+		do {
+			// condition on type of event occurring
+			// if arrival, add process to run queue and then schedule
+			// if finish, remove running process, add to event queue, update statistics, then schedule
+			// if timer tick, just schedule
+			switch (evt_pop(&event, &t, &proc)) {
+			case ARRIVAL:
+				proc->entrance = t;
+				proc->end = t; // in order to record waiting time
+				rq_add(&q, proc); // also calculates vruntime
 
-			printf("time: %llu pid: %d arrival\n", t MS, proc->pid);
-			// if (q.running && q.running->vruntime > proc->vruntime) printf("preempt\n");
-			break;
-		case FINISH:
-			fprintf(f, "%d %llu\n", q.running->pid, (t - q.running->burststart) MS);
+				printf("time: %llu pid: %d arrival\n", t MS, proc->pid);
+				if (q.running && q.running->vruntime > proc->vruntime) printf("preempt\n");
+				break;
+			case FINISH:
+				fprintf(f, "%d %llu\n", q.running->pid, (t - q.running->burststart) MS);
 
-			rq_update(&q, t);
-			q.running->bursttime = 0;
+				rq_update(&q, t);
+				q.running->bursttime = 0;
 
-			// if process not in last cpu burst, should enter io burst and enter run queue afterwards
-			if (q.running->burstnum < q.running->burstlen - 1) {
-				printf("time: %llu pid: %d enter io burst %d of length %llu\n", t MS, q.running->pid,
-					q.running->burstnum, q.running->iobursts[q.running->burstnum] MS); // testing
+				// if process not in last cpu burst, should enter io burst and enter run queue afterwards
+				if (q.running->burstnum < q.running->burstlen - 1) {
+					printf("time: %llu pid: %d enter io burst %d of length %llu\n", t MS, q.running->pid,
+						q.running->burstnum, q.running->iobursts[q.running->burstnum] MS); // testing
 
-				evt_addproc(&event, q.running, t + q.running->iobursts[q.running->burstnum]);
-				q.running->burstnum++;
+					evt_addproc(&event, q.running, t + q.running->iobursts[q.running->burstnum]);
+					q.running->burstnum++;
+				}
+				// else printf("time: %llu pid: %d exit\n", t MS, q.running->pid); // testing
+
+				rq_yield(&q); // remove q.running from run queue
+				event.finish = IDLE;
+
+				idletime = t;
+				break;
 			}
-			else printf("time: %llu pid: %d exit\n", t MS, q.running->pid); // testing
-
-			rq_yield(&q); // remove q.running from run queue
-			event.finish = IDLE;
-
-			idletime = t;
-			break;
-		}
+		} while (evt_min(&event) == t);
 
 		// schedule process
 
@@ -119,8 +122,8 @@ int main(int argc, char *argv[])
 			// if running process preempted, in which case proc = q->running, q->running = NULL
 			if (proc = rq_preempt(&q, t)) {
 				event.finish = IDLE;
-				fprintf(f, "%d %llu\n", proc->pid, (t - proc->burststart) MS);
 				idletime = t;
+				fprintf(f, "%d %llu\n", proc->pid, (t - proc->burststart) MS);
 
 /*
 				// testing
@@ -144,7 +147,7 @@ int main(int argc, char *argv[])
 			// update statistics such as waiting time, response time
 			if (q.running) {
 				if (!q.running->bursttime) // newly scheduled after arrival or io burst
-					q.running->response += (t - q.running->entrance);
+					q.running->response += t - q.running->entrance;
 				if (!q.running->runtime) // first added
 					q.running->actual_start = t;
 				q.running->burststart = t;
@@ -155,8 +158,9 @@ int main(int argc, char *argv[])
 				evt_setfinish(&event, q.running, t);
 
 				// if CPU was previously idle, record it
+				// idletime is updated whenever running process leaves cpu
 				if (idletime = t - idletime)
-					fprintf(f, "idle %llu\n", idletime MS);
+					fprintf(f, "idle %llu\n", (idletime) MS);
 			}
 
 			// testing, write to log file instead
@@ -167,10 +171,11 @@ int main(int argc, char *argv[])
 	}
 
 	// output statistics
+	// remove burst number and runtime
 	for (node *min = rbtree_min(&procs); min; min = min->next) {
 		proc = min->process;
-		printf("%d %d %llu %llu %llu %llu %llu\n", proc->pid, proc->prio, proc->start MS, proc->end MS,
-		       (proc->end - proc->start) MS, proc->waiting MS, proc->response / proc->burstlen MS);
+		printf("%d %d %llu %llu %llu %llu %llu %d %llu\n", proc->pid, proc->prio, proc->start MS, proc->end MS,
+		       (proc->end - proc->start) MS, proc->waiting MS, proc->response / proc->burstlen MS, proc->burstlen, proc->runtime MS);
 	}
 
 	rq_free(&q);

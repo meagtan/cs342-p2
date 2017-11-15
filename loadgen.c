@@ -21,7 +21,7 @@
 #define ROUND(n, d) (d * ((int) (n / d)))
 
 // generate var using the first nonzero value expr returns
-// #define GENERATE(var, expr) while (!(var = (expr)))
+#define GENERATE(var, expr) while (!(var = (expr)))
 
 int main(int argc, char *argv[])
 {
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 	cpu   = atoi(argv[4]);
 	io    = atoi(argv[5]);
 
-	printf("N: %d start: %d burst: %d cpu: %d io: %d\n", N, start, burst, cpu, io);
+	// printf("N: %d start: %d burst: %d cpu: %d io: %d\n", N, start, burst, cpu, io);
 
 	FILE *f = fopen(argv[6], "w");
 	if (!f) {
@@ -53,11 +53,9 @@ int main(int argc, char *argv[])
 	// generate workload for each process
 	for (int i = 1; i <= N; ++i) {
 		// generate number of bursts
-		// equivalent to sampling bursttime from a geometric distribution with success probability 1-exp(-burst)
+		// equivalent to sampling bursttime from a geometric distribution with success probability 1-exp(-burst):
 		// integrating burst*exp(-burst*t) for n<t<n+1 (due to rounding) gives (1-exp(-burst))*exp(-burst)^n
-		// GENERATE(burstnum, EXP(burst)); // burst times should be positive
-		// while (!(burstnum = EXP(burst)));
-		burstnum = 1 + EXP(burst); // burst times should be positive
+		GENERATE(burstnum, EXP(burst)); // burst times should be positive
 
 		// generate start time
 		fprintf(f, "%d  start %d prio %d\n", i, EXP(start), NORMAL(20, 5) % 40);
