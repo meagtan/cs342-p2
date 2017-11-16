@@ -14,7 +14,7 @@ void pcb_init(pcb *p, int pid)
 	p->maxlen    = MAXLEN;
 
 	p->actual_start = p->end = 0;
-	p->waiting = p->response = p->runtime = 0;
+	p->waiting = p->response = p->runtime = p->iotime = 0;
 
 	p->vruntime = p->timeslice = p->burstnum = p->bursttime = p->burststart = 0;
 }

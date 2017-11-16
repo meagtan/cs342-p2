@@ -12,19 +12,20 @@ typedef struct _pcb {
 	timeunit *cpubursts, *iobursts;
 	int burstlen, maxlen; // len(cpubursts) == len(iobursts) + 1 == burstlen < maxlen
 
-	// statistics
-	timeunit actual_start, end; // turnaround = end - actual_start, end = time process last enters or leaves execution
-	timeunit response; // average response time, updated whenever process arrives and is scheduled to run
-	timeunit waiting;
-	timeunit runtime; // total run time
-	timeunit entrance;
+	// statistical variables, updated dynamically
+	int burstnum;               // number of cpu bursts completed
+	timeunit bursttime;         // currently elapsed time of last cpu burst, <= cpubursts[burstnum]
+	timeunit actual_start, end; // turnaround = end - start, end = time process last arrives, starts or pauses execution
+	timeunit response;          // total response time, updated whenever process arrives and is scheduled to run
+	timeunit waiting;           // total waiting time, updated using end whenever process is scheduled
+	timeunit runtime;           // total run time
+	timeunit entrance;          // last time process arrived, in the beginning or after I/O burst
+	timeunit burststart;        // time the process has last started execution
+	timeunit iotime;            // time spent in io bursts
 
 	// other variables for scheduling
 	timeunit vruntime;  // virtual run time
 	timeunit timeslice; // current time slice of process, may not be necessary to keep here
-	int burstnum;  // number of cpu bursts completed
-	timeunit bursttime; // currently elapsed time of last cpu burst, <= cpubursts[burstnum]
-	timeunit burststart; // time the process has last started execution
 } pcb;
 
 void pcb_init(pcb *, int pid);

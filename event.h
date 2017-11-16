@@ -3,13 +3,13 @@
  * - Timer ticks, occurring independently of any processing event
  * - A process requesting to use CPU, whether newly created or after I/O burst
  * - Running process finishing CPU burst voluntarily
- *  In order to store such events in an event queue and dispatch them by order of occurrence, we need to
- * keep in mind that, while the time the next timer tick or process arrival will occur can be determined
- * ahead of time, the time the running process will finish CPU burst may change due to a future event
- * causing it to be preempted.
- *  Hence, keeping all types of events in the same queue would require changing the priority of the third
- * type of events if necessary.
- *  The following struct and functions implement an abstract event queue that keeps these in mind.
+ * In order to store such events in an event queue and dispatch them by order of occurrence, we need to
+ *  keep in mind that, while the time the next timer tick or process arrival will occur can be determined
+ *  ahead of time, the time the running process will finish CPU burst may change due to a future event
+ *  causing it to be preempted.
+ * Hence, keeping all types of events in the same queue would require changing the priority of the third
+ *  type of events if necessary.
+ * The following struct and functions implement an abstract event queue that keeps these in mind.
  */
 
 #include "specs.h"
@@ -24,7 +24,8 @@ typedef struct {
 // types of events
 enum {TICK, ARRIVAL, FINISH};
 
-// when running process leaves, finish should be -1
+// set finish to IDLE whenever running process leaves
+// since timeunit is unsigned, this makes finish larger than any other time value
 #define IDLE -1
 
 void evt_init(evtqueue *);
@@ -35,13 +36,14 @@ void evt_addproc(evtqueue *, pcb *, timeunit);
 // time of next event
 timeunit evt_min(evtqueue *);
 
-// retrieve next event, pass time of occurrence and arriving process (if any) in parameter, return type of event in return value
+// retrieve next event, pass time of occurrence and arriving process (if any) in parameter,
+// return type of event in return value
 int evt_pop(evtqueue *, timeunit *, pcb **);
 
 // set finish time of running process
 void evt_setfinish(evtqueue *, pcb *, timeunit);
 
-// no process to arrive or finish execution
+// whether no process will arrive or finish execution
 int evt_empty(evtqueue *);
 
 void evt_free(evtqueue *);

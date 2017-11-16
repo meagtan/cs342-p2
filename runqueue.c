@@ -14,7 +14,7 @@ static const int prio_to_weight[40] = {
 /*  15 */        36,        29,        23,        18,        15,
 };
 
-#define TARGET_LATENCY(q) ((timeunit) GRANULARITY * ((q)->procs > 20 ? (q)->procs : 20))
+#define TARGET_LATENCY(q) ((timeunit) (GRANULARITY * (q)->procs > LATENCY ? GRANULARITY * (q)->procs : LATENCY))
 
 void rq_init(runqueue *q)
 {
@@ -36,7 +36,7 @@ int rq_empty(runqueue *q)
 void rq_add(runqueue *q, pcb *p)
 {
 	// vruntime = min_vruntime - 10 ms for new process
-	// vruntime = min(old_vruntime, min_vruntime - targeted_latency) after io burst
+	// vruntime = max(old_vruntime, min_vruntime - targeted_latency) after io burst
 	// need checks, otherwise unsigned subtraction overflows
 	if (p->vruntime == 0 && q->min_vruntime > GRANULARITY) // new process
 		p->vruntime = q->min_vruntime - GRANULARITY;
@@ -47,6 +47,7 @@ void rq_add(runqueue *q, pcb *p)
 	q->procs++;
 	q->load += prio_to_weight[p->prio];
 
+	// preempt running process if vruntime of newly arriving process is less than vruntime of running process
 	q->preempt = (q->running && p->vruntime < q->running->vruntime);
 }
 
