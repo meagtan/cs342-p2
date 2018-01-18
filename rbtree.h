@@ -1,3 +1,12 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Red-black tree storing pcbs indexed by an unsigned long long key.
+ * Currently implemented as simple ordered linked lists
+ */
+
 #ifndef __RBTREE_H
 #define __RBTREE_H
 

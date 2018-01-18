@@ -1,3 +1,11 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Implementation of runqueue.h
+ */
+
 #include "runqueue.h"
 
 #include <stdio.h> // testing

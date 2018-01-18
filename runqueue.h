@@ -1,3 +1,12 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Runqueue struct containing waiting and running processes, as well as
+ * functions to add new processes, remove and schedule running process, etc.
+ */
+
 #ifndef __RUNQUEUE_H
 #define __RUNQUEUE_H
 

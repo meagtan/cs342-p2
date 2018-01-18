@@ -1,3 +1,11 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Simulates CFS scheduling algorithm.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

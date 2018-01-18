@@ -1,4 +1,10 @@
-// Scheduling parameters and other common definitions go here
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Scheduling parameters and other common definitions
+ */
 
 #ifndef __SPECS_H
 #define __SPECS_H

@@ -1,3 +1,11 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * rbtree implemented as an ordered linked list with dummy head node
+ */
+
 #include <stdio.h> // testing
 #include <stdlib.h>
 
@@ -15,21 +23,6 @@ typedef struct _node {
 
 struct _rbtree {
 	node *root, *min;
-};
-
-
-
-// linked list
-
-struct _node {
-	pcb *process;
-	struct _node *next, *prev;
-	int key;
-};
-
-
-struct _rbtree {
-	node *root;
 };
 */
 

@@ -1,4 +1,10 @@
 /*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Event queue dispatching next event that will trigger a scheduling decision.
+ *
  * There are three main types of events that cause an interrupt and trigger a scheduling decision:
  * - Timer ticks, occurring independently of any processing event
  * - A process requesting to use CPU, whether newly created or after I/O burst

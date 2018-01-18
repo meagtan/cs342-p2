@@ -1,3 +1,11 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Declaration and functions for struct storing information about processes.
+ */
+
 #ifndef __PCB_H
 #define __PCB_H
 
@@ -30,8 +38,8 @@ typedef struct _pcb {
 
 void pcb_init(pcb *, int pid);
 
+// add burst of given duration
 void pcb_add_cpuburst(pcb *, timeunit);
-
 void pcb_add_ioburst(pcb *, timeunit);
 
 void pcb_free(pcb *);

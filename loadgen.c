@@ -1,3 +1,11 @@
+/*
+ * CS 342 Project 2
+ * Ata Deniz Aydin
+ * 21502637
+ *
+ * Generates workload file.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
